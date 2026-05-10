@@ -78,11 +78,8 @@ form.addEventListener("submit", (event) => {
   items.unshift(newItem);
   saveItems();
   renderItems();
-  form.reset();
-  stockInput.value = 1;
-  minimumInput.value = 1;
+  resetForm();
   setVoiceStatus("商品を追加しました。続けて音声入力もできます。", "success");
-  nameInput.focus();
 });
 
 itemList.addEventListener("click", (event) => {
@@ -96,11 +93,11 @@ itemList.addEventListener("click", (event) => {
   const action = button.dataset.action;
 
   if (action === "increase") {
-    changeStock(id, 1);
+    updateStock(id, 1);
   }
 
   if (action === "decrease") {
-    changeStock(id, -1);
+    updateStock(id, -1);
   }
 
   if (action === "delete") {
@@ -203,7 +200,7 @@ function applyVoiceResult(transcript) {
   }
 
   const stockMessage = parsedItem.stock === null ? "在庫数は手入力してください。" : `在庫数を${parsedItem.stock}個にしました。`;
-  setVoiceStatus(`「${parsedItem.name}」を入力しました。${stockMessage}`, "success");
+  setVoiceStatus(`「${parsedItem.name}」を入力しました。内容を確認して追加してください。${stockMessage}`, "success");
   minimumInput.focus();
 }
 
@@ -240,7 +237,7 @@ function normalizeNumbers(value) {
 }
 
 function parseJapaneseNumber(numberText) {
-  const numbers = {
+  const numberMap = {
     一: 1,
     二: 2,
     三: 3,
@@ -258,8 +255,8 @@ function parseJapaneseNumber(numberText) {
 
   if (numberText.includes("十")) {
     const [tensText, onesText] = numberText.split("十");
-    const tens = tensText ? numbers[tensText] : 1;
-    const ones = onesText ? numbers[onesText] : 0;
+    const tens = tensText ? numberMap[tensText] : 1;
+    const ones = onesText ? numberMap[onesText] : 0;
 
     if (!tens || ones === undefined) {
       return null;
@@ -268,7 +265,7 @@ function parseJapaneseNumber(numberText) {
     return tens * 10 + ones;
   }
 
-  return numbers[numberText] || null;
+  return numberMap[numberText] || null;
 }
 
 function suggestCategory(name) {
@@ -313,11 +310,24 @@ function loadItems() {
     return sampleItems;
   }
 
-  return JSON.parse(storedItems);
+  try {
+    const parsedItems = JSON.parse(storedItems);
+    return Array.isArray(parsedItems) ? parsedItems : sampleItems;
+  } catch (error) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(sampleItems));
+    return sampleItems;
+  }
 }
 
 function saveItems() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+}
+
+function resetForm() {
+  form.reset();
+  stockInput.value = 1;
+  minimumInput.value = 1;
+  nameInput.focus();
 }
 
 function renderItems() {
@@ -363,7 +373,7 @@ function isNeedRestock(item) {
   return item.stock <= item.minimum;
 }
 
-function changeStock(id, amount) {
+function updateStock(id, amount) {
   items = items.map((item) => {
     if (item.id !== id) {
       return item;
