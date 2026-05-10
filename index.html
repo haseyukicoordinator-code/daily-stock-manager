@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>日用品 在庫管理</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="app-header">
+    <div>
+      <p class="eyebrow">Daily Stock Manager</p>
+      <h1>日用品 在庫管理</h1>
+      <p class="lead">家にある日用品の残り数を記録して、買い忘れを防ぎましょう。</p>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="card form-card" aria-labelledby="form-title">
+      <h2 id="form-title">商品を登録</h2>
+      <form id="item-form" class="item-form">
+        <label>
+          商品名
+          <input type="text" id="item-name" placeholder="例：食器用洗剤" required>
+        </label>
+
+        <label>
+          カテゴリ
+          <select id="item-category" required>
+            <option value="洗剤">洗剤</option>
+            <option value="掃除用品">掃除用品</option>
+            <option value="紙類">紙類</option>
+            <option value="キッチン用品">キッチン用品</option>
+            <option value="衛生用品">衛生用品</option>
+            <option value="食品ストック">食品ストック</option>
+            <option value="その他">その他</option>
+          </select>
+        </label>
+
+        <div class="form-grid">
+          <label>
+            現在の在庫数
+            <input type="number" id="item-stock" min="0" value="1" required>
+          </label>
+
+          <label>
+            最低必要数
+            <input type="number" id="item-minimum" min="0" value="1" required>
+          </label>
+        </div>
+
+        <label>
+          メモ
+          <textarea id="item-note" rows="3" placeholder="例：詰め替え用を買う"></textarea>
+        </label>
+
+        <button type="submit" class="primary-button">追加する</button>
+      </form>
+    </section>
+
+    <section class="summary-grid" aria-label="在庫の概要">
+      <div class="summary-card">
+        <span id="total-count">0</span>
+        <p>登録商品</p>
+      </div>
+      <div class="summary-card alert">
+        <span id="need-count">0</span>
+        <p>買い足し必要</p>
+      </div>
+    </section>
+
+    <section class="list-section" aria-labelledby="list-title">
+      <div class="section-heading">
+        <h2 id="list-title">在庫リスト</h2>
+        <p>＋1 / −1 ボタンで在庫数をすぐに更新できます。</p>
+      </div>
+      <div id="item-list" class="item-list"></div>
+      <p id="empty-message" class="empty-message">商品がまだ登録されていません。</p>
+    </section>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
