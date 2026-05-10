@@ -175,7 +175,12 @@ function setupVoiceInput() {
 
 function startVoiceRecognition() {
   setVoiceStatus("マイクを起動しています…", "listening");
-  recognition.start();
+
+  try {
+    recognition.start();
+  } catch (error) {
+    setVoiceStatus("音声入力を開始できませんでした。少し待ってからもう一度お試しください。", "error");
+  }
 }
 
 function applyVoiceResult(transcript) {
@@ -207,12 +212,18 @@ function parseVoiceInput(transcript) {
     .replace(/[、。]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
-  const countMatch = normalizedTranscript.match(/([0-9]+)\s*(個|こ|つ|本|枚|袋|箱|パック|ロール)?/);
+  const countPattern = /([0-9]+)\s*(個|こ|つ|本|枚|袋|箱|パック|ロール|セット)?/;
+  const countMatch = normalizedTranscript.match(countPattern);
   const stock = countMatch ? Number(countMatch[1]) : null;
   const name = normalizedTranscript
-    .replace(/([0-9]+)\s*(個|こ|つ|本|枚|袋|箱|パック|ロール)?/, "")
-    .replace(/^(商品名|在庫|ストック|追加|登録|を|は|が)+/, "")
-    .replace(/(を|は|が|です|あります|追加|登録)+$/g, "")
+    .replace(/(商品名|品名|在庫数|在庫|ストック|数量|数)\s*(は|が|を|:|：)?/g, " ")
+    .replace(countPattern, " ")
+    .replace(/(追加|登録|買う|買って|買い足し|あります|です|お願い|して)/g, " ")
+    .replace(/(^|\s)(を|は|が|の|で)(?=\s|$)/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/^(を|は|が|の|で)+/, "")
+    .replace(/(を|は|が|の|で)+$/, "")
     .trim();
 
   return { name, stock };
