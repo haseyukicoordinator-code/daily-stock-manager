@@ -1,5 +1,6 @@
 const STORAGE_KEY = "daily-stock-manager-items";
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+const UNIT_OPTIONS = ["個", "本", "箱", "袋", "枚", "ロール", "パック", "セット", "ml", "L", "g", "kg"];
 
 const sampleItems = [
   {
@@ -7,6 +8,7 @@ const sampleItems = [
     name: "食器用洗剤",
     category: "洗剤",
     stock: 1,
+    unit: "本",
     minimum: 2,
     note: "詰め替え用を買う"
   },
@@ -14,23 +16,26 @@ const sampleItems = [
     id: createId(),
     name: "トイレットペーパー",
     category: "紙類",
-    stock: 6,
+    stock: 3,
+    unit: "ロール",
     minimum: 4,
-    note: "12ロール入りをストック"
+    note: "残り少なくなったら12ロール入りを買う"
   },
   {
     id: createId(),
-    name: "キッチンペーパー",
-    category: "キッチン用品",
+    name: "ティッシュ",
+    category: "紙類",
     stock: 1,
-    minimum: 1,
-    note: "残り1個になったら買い足し"
+    unit: "箱",
+    minimum: 2,
+    note: "リビング用"
   },
   {
     id: createId(),
     name: "レトルトカレー",
     category: "食品ストック",
     stock: 3,
+    unit: "個",
     minimum: 2,
     note: "非常食として保管"
   }
@@ -40,6 +45,7 @@ const form = document.querySelector("#item-form");
 const nameInput = document.querySelector("#item-name");
 const categoryInput = document.querySelector("#item-category");
 const stockInput = document.querySelector("#item-stock");
+const unitInput = document.querySelector("#item-unit");
 const minimumInput = document.querySelector("#item-minimum");
 const noteInput = document.querySelector("#item-note");
 const voiceButton = document.querySelector("#voice-button");
@@ -57,6 +63,7 @@ let heardSpeech = false;
 let recognitionHadError = false;
 
 setupVoiceInput();
+registerServiceWorker();
 renderItems();
 
 form.addEventListener("submit", (event) => {
@@ -67,6 +74,7 @@ form.addEventListener("submit", (event) => {
     name: nameInput.value.trim(),
     category: categoryInput.value,
     stock: Number(stockInput.value),
+    unit: unitInput.value,
     minimum: Number(minimumInput.value),
     note: noteInput.value.trim()
   };
@@ -140,7 +148,7 @@ function setupVoiceInput() {
     voiceButton.classList.add("listening");
     voiceButton.setAttribute("aria-pressed", "true");
     voiceButtonText.textContent = "認識を停止";
-    setVoiceStatus("音声認識中です。商品名と個数を話してください。", "listening");
+    setVoiceStatus("音声認識中です。商品名・在庫数・単位を話してください。", "listening");
   });
 
   recognition.addEventListener("result", (event) => {
@@ -193,7 +201,7 @@ function applyVoiceResult(transcript) {
   const parsedItem = parseVoiceInput(transcript);
 
   if (!parsedItem.name) {
-    setVoiceStatus("商品名を認識できませんでした。例：トイレットペーパー 3個", "error");
+    setVoiceStatus("商品名を認識できませんでした。例：トイレットペーパー 3ロール", "error");
     return;
   }
 
@@ -203,12 +211,18 @@ function applyVoiceResult(transcript) {
     stockInput.value = parsedItem.stock;
   }
 
+  if (parsedItem.unit) {
+    unitInput.value = parsedItem.unit;
+  }
+
   const suggestedCategory = suggestCategory(parsedItem.name);
   if (suggestedCategory) {
     categoryInput.value = suggestedCategory;
   }
 
-  const stockMessage = parsedItem.stock === null ? "在庫数は手入力してください。" : `在庫数を${parsedItem.stock}個にしました。`;
+  const stockMessage = parsedItem.stock === null
+    ? "在庫数は手入力してください。"
+    : `在庫数を${parsedItem.stock}${parsedItem.unit || unitInput.value}にしました。`;
   setVoiceStatus(`「${parsedItem.name}」を入力しました。内容を確認して追加してください。${stockMessage}`, "success");
   minimumInput.focus();
 }
@@ -218,11 +232,13 @@ function parseVoiceInput(transcript) {
     .replace(/[、。]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
-  const countPattern = /([0-9]+)\s*(個|こ|つ|本|枚|袋|箱|パック|ロール|セット)?/;
+  const unitPattern = UNIT_OPTIONS.join("|");
+  const countPattern = new RegExp(`([0-9]+(?:\\.[0-9]+)?)\\s*(${unitPattern}|こ|つ)?`, "i");
   const countMatch = normalizedTranscript.match(countPattern);
   const stock = countMatch ? Number(countMatch[1]) : null;
+  const unit = normalizeUnit(countMatch ? countMatch[2] : "");
   const name = normalizedTranscript
-    .replace(/(商品名|品名|在庫数|在庫|ストック|数量|数)\s*(は|が|を|:|：)?/g, " ")
+    .replace(/(商品名|品名|在庫数|在庫|ストック|数量|数|単位)\s*(は|が|を|:|：)?/g, " ")
     .replace(countPattern, " ")
     .replace(/(追加|登録|買う|買って|買い足し|あります|です|お願い|して)/g, " ")
     .replace(/(^|\s)(を|は|が|の|で)(?=\s|$)/g, " ")
@@ -232,7 +248,17 @@ function parseVoiceInput(transcript) {
     .replace(/(を|は|が|の|で)+$/, "")
     .trim();
 
-  return { name, stock };
+  return { name, stock, unit };
+}
+
+function normalizeUnit(unit) {
+  const unitMap = {
+    こ: "個",
+    つ: "個",
+    l: "L"
+  };
+
+  return unitMap[unit] || unit || "";
 }
 
 function normalizeNumbers(value) {
@@ -322,11 +348,20 @@ function loadItems() {
 
   try {
     const parsedItems = JSON.parse(storedItems);
-    return Array.isArray(parsedItems) ? parsedItems : sampleItems;
+    return Array.isArray(parsedItems) ? parsedItems.map(normalizeItem) : sampleItems;
   } catch (error) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(sampleItems));
     return sampleItems;
   }
+}
+
+function normalizeItem(item) {
+  return {
+    ...item,
+    unit: UNIT_OPTIONS.includes(item.unit) ? item.unit : "個",
+    stock: Number(item.stock) || 0,
+    minimum: Number(item.minimum) || 0
+  };
 }
 
 function saveItems() {
@@ -336,6 +371,7 @@ function saveItems() {
 function resetForm() {
   form.reset();
   stockInput.value = 1;
+  unitInput.value = "個";
   minimumInput.value = 1;
   nameInput.focus();
 }
@@ -349,10 +385,11 @@ function renderItems() {
 
   items.forEach((item) => {
     const itemElement = document.createElement("article");
-    itemElement.className = "stock-item";
+    const needsRestock = isNeedRestock(item);
+    itemElement.className = needsRestock ? "stock-item need-restock" : "stock-item";
 
-    const statusText = isNeedRestock(item) ? "買い足し必要" : "在庫OK";
-    const statusClass = isNeedRestock(item) ? "status-badge need" : "status-badge";
+    const statusText = needsRestock ? "買い足し必要" : "在庫OK";
+    const statusClass = needsRestock ? "status-badge need" : "status-badge";
     const noteHtml = item.note ? `<p class="item-note">メモ：${escapeHtml(item.note)}</p>` : "";
 
     itemElement.innerHTML = `
@@ -360,12 +397,18 @@ function renderItems() {
         <div class="item-title-row">
           <h3>${escapeHtml(item.name)}</h3>
           <span class="category-badge">${escapeHtml(item.category)}</span>
+        </div>
+        <div class="stock-overview">
+          <div>
+            <span class="stock-label">現在</span>
+            <strong class="stock-value">${formatQuantity(item.stock, item.unit)}</strong>
+          </div>
+          <div>
+            <span class="stock-label">最低</span>
+            <strong class="minimum-value">${formatQuantity(item.minimum, item.unit)}</strong>
+          </div>
           <span class="${statusClass}">${statusText}</span>
         </div>
-        <p class="item-meta">
-          <span>現在：${item.stock} 個</span>
-          <span>最低：${item.minimum} 個</span>
-        </p>
         ${noteHtml}
       </div>
       <div class="item-actions" aria-label="${escapeHtml(item.name)}の操作">
@@ -377,6 +420,10 @@ function renderItems() {
 
     itemList.appendChild(itemElement);
   });
+}
+
+function formatQuantity(value, unit) {
+  return `${value}${unit}`;
 }
 
 function isNeedRestock(item) {
@@ -418,4 +465,14 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+}
+
+function registerServiceWorker() {
+  if (!("serviceWorker" in navigator)) {
+    return;
+  }
+
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("service-worker.js");
+  });
 }

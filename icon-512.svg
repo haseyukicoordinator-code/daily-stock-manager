@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="日用品在庫">
+  <rect width="512" height="512" rx="112" fill="#2f7d6d"/>
+  <circle cx="372" cy="138" r="64" fill="#fff0ed" opacity="0.9"/>
+  <path d="M128 164h198a38 38 0 0 1 38 38v186H166a38 38 0 0 1-38-38V164Z" fill="#ffffff"/>
+  <path d="M172 220h148M172 278h116M172 336h84" stroke="#2f7d6d" stroke-width="26" stroke-linecap="round"/>
+  <path d="M352 306l38 38 70-92" fill="none" stroke="#d94f3d" stroke-width="32" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
