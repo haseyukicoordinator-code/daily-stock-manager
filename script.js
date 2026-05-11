@@ -106,6 +106,12 @@ itemList.addEventListener("click", (event) => {
 });
 
 function setupVoiceInput() {
+  if (!window.isSecureContext) {
+    voiceButton.disabled = true;
+    setVoiceStatus("音声入力はHTTPSまたはlocalhostで利用できます。", "error");
+    return;
+  }
+
   if (!SpeechRecognition) {
     voiceButton.disabled = true;
     setVoiceStatus("このブラウザは音声入力に対応していません。ChromeやSafariなどでお試しください。", "error");
