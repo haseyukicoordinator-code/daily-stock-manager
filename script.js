@@ -1,6 +1,28 @@
 const STORAGE_KEY = "daily-stock-manager-items";
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 const UNIT_OPTIONS = ["個", "本", "箱", "袋", "枚", "ロール", "パック", "セット", "ml", "L", "g", "kg"];
+const UNIT_ALIASES = {
+  こ: "個",
+  つ: "個",
+  ほん: "本",
+  はこ: "箱",
+  ふくろ: "袋",
+  まい: "枚",
+  ろーる: "ロール",
+  ぱっく: "パック",
+  せっと: "セット",
+  ミリ: "ml",
+  ミリリットル: "ml",
+  ｍｌ: "ml",
+  リットル: "L",
+  ｌ: "L",
+  l: "L",
+  グラム: "g",
+  ｇ: "g",
+  キロ: "kg",
+  キログラム: "kg",
+  ｋｇ: "kg"
+};
 
 const sampleItems = [
   {
@@ -215,6 +237,10 @@ function applyVoiceResult(transcript) {
     unitInput.value = parsedItem.unit;
   }
 
+  if (parsedItem.minimum !== null) {
+    minimumInput.value = parsedItem.minimum;
+  }
+
   const suggestedCategory = suggestCategory(parsedItem.name);
   if (suggestedCategory) {
     categoryInput.value = suggestedCategory;
@@ -223,7 +249,8 @@ function applyVoiceResult(transcript) {
   const stockMessage = parsedItem.stock === null
     ? "在庫数は手入力してください。"
     : `在庫数を${parsedItem.stock}${parsedItem.unit || unitInput.value}にしました。`;
-  setVoiceStatus(`「${parsedItem.name}」を入力しました。内容を確認して追加してください。${stockMessage}`, "success");
+  const minimumMessage = parsedItem.minimum === null ? "" : ` 最低必要数を${parsedItem.minimum}${parsedItem.unit || unitInput.value}にしました。`;
+  setVoiceStatus(`「${parsedItem.name}」を入力しました。内容を確認して追加してください。${stockMessage}${minimumMessage}`, "success");
   minimumInput.focus();
 }
 
@@ -232,12 +259,16 @@ function parseVoiceInput(transcript) {
     .replace(/[、。]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
-  const unitPattern = UNIT_OPTIONS.join("|");
-  const countPattern = new RegExp(`([0-9]+(?:\\.[0-9]+)?)\\s*(${unitPattern}|こ|つ)?`, "i");
-  const countMatch = normalizedTranscript.match(countPattern);
+  const unitPattern = getUnitPattern();
+  const countPattern = new RegExp(`([0-9]+(?:\\.[0-9]+)?)\\s*(${unitPattern})?`, "i");
+  const minimumPattern = new RegExp(`(最低必要数|最低|最小|必要)\\s*(は|が|を|:|：)?\\s*([0-9]+(?:\\.[0-9]+)?)\\s*(${unitPattern})?`, "i");
+  const minimumMatch = normalizedTranscript.match(minimumPattern);
+  const minimum = minimumMatch ? Number(minimumMatch[3]) : null;
+  const textWithoutMinimum = normalizedTranscript.replace(minimumPattern, " ");
+  const countMatch = textWithoutMinimum.match(countPattern);
   const stock = countMatch ? Number(countMatch[1]) : null;
-  const unit = normalizeUnit(countMatch ? countMatch[2] : "");
-  const name = normalizedTranscript
+  const unit = normalizeUnit((countMatch && countMatch[2]) || (minimumMatch && minimumMatch[4]) || "");
+  const name = textWithoutMinimum
     .replace(/(商品名|品名|在庫数|在庫|ストック|数量|数|単位)\s*(は|が|を|:|：)?/g, " ")
     .replace(countPattern, " ")
     .replace(/(追加|登録|買う|買って|買い足し|あります|です|お願い|して)/g, " ")
@@ -248,17 +279,22 @@ function parseVoiceInput(transcript) {
     .replace(/(を|は|が|の|で)+$/, "")
     .trim();
 
-  return { name, stock, unit };
+  return { name, stock, unit, minimum };
+}
+
+function getUnitPattern() {
+  return [...UNIT_OPTIONS, ...Object.keys(UNIT_ALIASES)]
+    .sort((a, b) => b.length - a.length)
+    .map(escapeRegExp)
+    .join("|");
 }
 
 function normalizeUnit(unit) {
-  const unitMap = {
-    こ: "個",
-    つ: "個",
-    l: "L"
-  };
+  return UNIT_ALIASES[unit] || unit || "";
+}
 
-  return unitMap[unit] || unit || "";
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function normalizeNumbers(value) {
