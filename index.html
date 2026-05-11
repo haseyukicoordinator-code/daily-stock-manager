@@ -2,8 +2,12 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#2f7d6d">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="日用品在庫">
   <title>日用品 在庫管理</title>
+  <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -11,7 +15,7 @@
     <div class="hero-inner">
       <p class="eyebrow">Daily Stock Manager</p>
       <h1>日用品 在庫管理</h1>
-      <p class="lead">家にある日用品の在庫を記録して、買い忘れを防ぎましょう。</p>
+      <p class="lead">家にある日用品の在庫をスマホでさっと確認。買い忘れを防ぎましょう。</p>
     </div>
   </header>
 
@@ -19,49 +23,25 @@
     <section class="card form-card" aria-labelledby="register-title">
       <div class="section-title">
         <h2 id="register-title">商品を登録</h2>
-        <p>手入力でも、スマホの音声入力でも登録できます。音声入力後は内容を確認して追加します。</p>
+        <p>手入力でも、スマホの音声入力でも登録できます。</p>
       </div>
 
       <div class="voice-panel" aria-labelledby="voice-title">
-        <button
-          type="button"
-          id="voice-button"
-          class="voice-button"
-          aria-describedby="voice-status"
-          aria-pressed="false"
-        >
+        <button type="button" id="voice-button" class="voice-button" aria-describedby="voice-status" aria-pressed="false">
           <span class="voice-icon" aria-hidden="true">🎙️</span>
           <span>音声で入力</span>
         </button>
-
         <div>
           <h3 id="voice-title">マイク入力</h3>
-
-          <p class="voice-example">
-            例：「トイレットペーパー 3個」「洗剤を2本追加」
-            （HTTPSまたはlocalhostで利用できます）
-          </p>
-
-          <p
-            id="voice-status"
-            class="voice-status"
-            aria-live="polite"
-          >
-            マイクボタンを押すと音声入力を開始します。
-            認識後は内容を確認してから追加してください。
-          </p>
+          <p class="voice-example">例：「トイレットペーパー 3ロール」「洗剤 2本」「ティッシュ 1箱」</p>
+          <p id="voice-status" class="voice-status" aria-live="polite">マイクボタンを押すと音声入力を開始します。</p>
         </div>
       </div>
 
       <form id="item-form" class="item-form">
         <label>
           商品名
-          <input
-            type="text"
-            id="item-name"
-            placeholder="例：食器用洗剤"
-            required
-          >
+          <input type="text" id="item-name" placeholder="例：食器用洗剤" autocomplete="off" required>
         </label>
 
         <label>
@@ -77,42 +57,42 @@
           </select>
         </label>
 
-        <div class="form-grid">
+        <div class="form-grid three-columns">
           <label>
             現在の在庫数
-            <input
-              type="number"
-              id="item-stock"
-              min="0"
-              value="1"
-              required
-            >
+            <input type="number" id="item-stock" min="0" value="1" inputmode="decimal" required>
+          </label>
+
+          <label>
+            単位
+            <select id="item-unit" required>
+              <option value="個">個</option>
+              <option value="本">本</option>
+              <option value="箱">箱</option>
+              <option value="袋">袋</option>
+              <option value="枚">枚</option>
+              <option value="ロール">ロール</option>
+              <option value="パック">パック</option>
+              <option value="セット">セット</option>
+              <option value="ml">ml</option>
+              <option value="L">L</option>
+              <option value="g">g</option>
+              <option value="kg">kg</option>
+            </select>
           </label>
 
           <label>
             最低必要数
-            <input
-              type="number"
-              id="item-minimum"
-              min="0"
-              value="1"
-              required
-            >
+            <input type="number" id="item-minimum" min="0" value="1" inputmode="decimal" required>
           </label>
         </div>
 
         <label>
           メモ
-          <textarea
-            id="item-note"
-            rows="3"
-            placeholder="例：詰め替え用を買う"
-          ></textarea>
+          <textarea id="item-note" rows="3" placeholder="例：詰め替え用を買う"></textarea>
         </label>
 
-        <button type="submit" class="primary-button">
-          追加する
-        </button>
+        <button type="submit" class="primary-button">追加する</button>
       </form>
     </section>
 
@@ -121,7 +101,6 @@
         <span id="total-count">0</span>
         <p>登録商品</p>
       </article>
-
       <article class="summary-card needs">
         <span id="need-count">0</span>
         <p>買い足し必要</p>
@@ -135,12 +114,8 @@
           <p>在庫数は ＋1 / −1 で素早く更新できます。</p>
         </div>
       </div>
-
       <div id="item-list" class="item-list"></div>
-
-      <p id="empty-message" class="empty-message">
-        商品がまだ登録されていません。
-      </p>
+      <p id="empty-message" class="empty-message">商品がまだ登録されていません。</p>
     </section>
   </main>
 
