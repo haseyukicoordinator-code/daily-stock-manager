@@ -1,198 +1,212 @@
 const STORAGE_KEY = "daily-stock-manager-items";
 
-const sampleItems = [
-  {
-    id: createId(),
-    name: "食器用洗剤",
-    category: "洗剤",
-    stock: 1,
-    minimum: 2,
-    note: "詰め替え用を買う"
-  },
-  {
-    id: createId(),
-    name: "トイレットペーパー",
-    category: "紙類",
-    stock: 6,
-    minimum: 4,
-    note: "12ロール入りをストック"
-  },
-  {
-    id: createId(),
-    name: "キッチンペーパー",
-    category: "キッチン用品",
-    stock: 1,
-    minimum: 1,
-    note: "残り1個になったら買い足し"
-  },
-  {
-    id: createId(),
-    name: "レトルトカレー",
-    category: "食品ストック",
-    stock: 3,
-    minimum: 2,
-    note: "非常食として保管"
-  }
-];
+const itemForm = document.getElementById("item-form");
+const itemList = document.getElementById("item-list");
+const emptyMessage = document.getElementById("empty-message");
 
-const form = document.querySelector("#item-form");
-const nameInput = document.querySelector("#item-name");
-const categoryInput = document.querySelector("#item-category");
-const stockInput = document.querySelector("#item-stock");
-const minimumInput = document.querySelector("#item-minimum");
-const noteInput = document.querySelector("#item-note");
-const itemList = document.querySelector("#item-list");
-const emptyMessage = document.querySelector("#empty-message");
-const totalCount = document.querySelector("#total-count");
-const needCount = document.querySelector("#need-count");
+const totalCount = document.getElementById("total-count");
+const needCount = document.getElementById("need-count");
 
-let items = loadItems();
+const voiceButton = document.getElementById("voice-button");
+const voiceStatus = document.getElementById("voice-status");
+
+const items = loadItems();
+
 renderItems();
 
-form.addEventListener("submit", (event) => {
+itemForm.addEventListener("submit", (event) => {
   event.preventDefault();
 
-  const newItem = {
-    id: createId(),
-    name: nameInput.value.trim(),
-    category: categoryInput.value,
-    stock: Number(stockInput.value),
-    minimum: Number(minimumInput.value),
-    note: noteInput.value.trim()
+  const item = {
+    id: crypto.randomUUID(),
+    name: document.getElementById("item-name").value.trim(),
+    category: document.getElementById("item-category").value,
+    stock: Number(document.getElementById("item-stock").value),
+    minimum: Number(document.getElementById("item-minimum").value),
+    note: document.getElementById("item-note").value.trim(),
   };
 
-  if (!newItem.name) {
-    nameInput.focus();
-    return;
-  }
+  items.push(item);
 
-  items.unshift(newItem);
   saveItems();
   renderItems();
-  form.reset();
-  stockInput.value = 1;
-  minimumInput.value = 1;
-  nameInput.focus();
+
+  itemForm.reset();
+
+  document.getElementById("item-stock").value = 1;
+  document.getElementById("item-minimum").value = 1;
 });
 
-itemList.addEventListener("click", (event) => {
-  const button = event.target.closest("button[data-action]");
+function renderItems() {
+  itemList.innerHTML = "";
 
-  if (!button) {
-    return;
+  if (items.length === 0) {
+    emptyMessage.style.display = "block";
+  } else {
+    emptyMessage.style.display = "none";
   }
 
-  const id = button.dataset.id;
-  const action = button.dataset.action;
+  let shortageCount = 0;
 
-  if (action === "increase") {
-    changeStock(id, 1);
-  }
+  items.forEach((item) => {
+    if (item.stock <= item.minimum) {
+      shortageCount++;
+    }
 
-  if (action === "decrease") {
-    changeStock(id, -1);
-  }
+    const card = document.createElement("article");
+    card.className = "item-card";
 
-  if (action === "delete") {
-    deleteItem(id);
-  }
-});
+    card.innerHTML = `
+      <div class="item-header">
+        <div>
+          <h3>${escapeHtml(item.name)}</h3>
+          <p class="category">${escapeHtml(item.category)}</p>
+        </div>
+      </div>
 
-function createId() {
-  return `item-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-}
+      <div class="stock-row">
+        <button class="stock-button decrease">−1</button>
+        <span class="stock-value">${item.stock}</span>
+        <button class="stock-button increase">＋1</button>
+      </div>
 
-function loadItems() {
-  const storedItems = localStorage.getItem(STORAGE_KEY);
+      <p class="minimum">
+        最低必要数：${item.minimum}
+      </p>
 
-  if (!storedItems) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(sampleItems));
-    return sampleItems;
-  }
+      ${
+        item.note
+          ? `<p class="note">${escapeHtml(item.note)}</p>`
+          : ""
+      }
 
-  return JSON.parse(storedItems);
+      <button class="delete-button">
+        削除
+      </button>
+    `;
+
+    card.querySelector(".increase").addEventListener("click", () => {
+      item.stock++;
+      saveItems();
+      renderItems();
+    });
+
+    card.querySelector(".decrease").addEventListener("click", () => {
+      if (item.stock > 0) {
+        item.stock--;
+      }
+
+      saveItems();
+      renderItems();
+    });
+
+    card.querySelector(".delete-button").addEventListener("click", () => {
+      const index = items.findIndex((target) => target.id === item.id);
+
+      if (index >= 0) {
+        items.splice(index, 1);
+      }
+
+      saveItems();
+      renderItems();
+    });
+
+    itemList.appendChild(card);
+  });
+
+  totalCount.textContent = items.length;
+  needCount.textContent = shortageCount;
 }
 
 function saveItems() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
 }
 
-function renderItems() {
-  itemList.innerHTML = "";
+function loadItems() {
+  const saved = localStorage.getItem(STORAGE_KEY);
 
-  totalCount.textContent = items.length;
-  needCount.textContent = items.filter(isNeedRestock).length;
-  emptyMessage.classList.toggle("show", items.length === 0);
-
-  items.forEach((item) => {
-    const itemElement = document.createElement("article");
-    itemElement.className = "stock-item";
-
-    const statusText = isNeedRestock(item) ? "買い足し必要" : "在庫OK";
-    const statusClass = isNeedRestock(item) ? "status-badge need" : "status-badge";
-    const noteHtml = item.note ? `<p class="item-note">メモ：${escapeHtml(item.note)}</p>` : "";
-
-    itemElement.innerHTML = `
-      <div class="item-main">
-        <div class="item-title-row">
-          <h3>${escapeHtml(item.name)}</h3>
-          <span class="category-badge">${escapeHtml(item.category)}</span>
-          <span class="${statusClass}">${statusText}</span>
-        </div>
-        <p class="item-meta">
-          <span>現在：${item.stock} 個</span>
-          <span>最低：${item.minimum} 個</span>
-        </p>
-        ${noteHtml}
-      </div>
-      <div class="item-actions" aria-label="${escapeHtml(item.name)}の操作">
-        <button class="stock-button" type="button" data-action="decrease" data-id="${item.id}" ${item.stock === 0 ? "disabled" : ""}>−1</button>
-        <button class="stock-button" type="button" data-action="increase" data-id="${item.id}">＋1</button>
-        <button class="delete-button" type="button" data-action="delete" data-id="${item.id}">削除</button>
-      </div>
-    `;
-
-    itemList.appendChild(itemElement);
-  });
-}
-
-function isNeedRestock(item) {
-  return item.stock <= item.minimum;
-}
-
-function changeStock(id, amount) {
-  items = items.map((item) => {
-    if (item.id !== id) {
-      return item;
-    }
-
-    return {
-      ...item,
-      stock: Math.max(0, item.stock + amount)
-    };
-  });
-
-  saveItems();
-  renderItems();
-}
-
-function deleteItem(id) {
-  const item = items.find((currentItem) => currentItem.id === id);
-
-  if (!item || !confirm(`「${item.name}」を削除しますか？`)) {
-    return;
+  if (!saved) {
+    return [];
   }
 
-  items = items.filter((currentItem) => currentItem.id !== id);
-  saveItems();
-  renderItems();
+  try {
+    return JSON.parse(saved);
+  } catch {
+    return [];
+  }
 }
 
 function escapeHtml(value) {
-  return String(value)
+  return value
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
+    .replaceAll(">", "&gt;");
+}
+
+/* =========================
+   音声入力
+========================= */
+
+const SpeechRecognition =
+  window.SpeechRecognition || window.webkitSpeechRecognition;
+
+if (SpeechRecognition) {
+  const recognition = new SpeechRecognition();
+
+  recognition.lang = "ja-JP";
+  recognition.interimResults = false;
+  recognition.continuous = false;
+
+  voiceButton.addEventListener("click", () => {
+    recognition.start();
+
+    voiceStatus.textContent =
+      "音声を認識中です…";
+
+    voiceButton.disabled = true;
+  });
+
+  recognition.addEventListener("result", (event) => {
+    const transcript =
+      event.results[0][0].transcript;
+
+    voiceStatus.textContent =
+      `認識結果：「${transcript}」`;
+
+    applyVoiceInput(transcript);
+  });
+
+  recognition.addEventListener("end", () => {
+    voiceButton.disabled = false;
+  });
+
+  recognition.addEventListener("error", () => {
+    voiceStatus.textContent =
+      "音声認識に失敗しました。";
+  });
+} else {
+  voiceStatus.textContent =
+    "このブラウザは音声入力に対応していません。";
+}
+
+function applyVoiceInput(text) {
+  const numberMatch = text.match(/\d+/);
+
+  const stock = numberMatch
+    ? Number(numberMatch[0])
+    : 1;
+
+  const name = text
+    .replace(/\d+/g, "")
+    .replace(/個|本|つ/g, "")
+    .replace(/追加/g, "")
+    .trim();
+
+  if (name) {
+    document.getElementById("item-name").value =
+      name;
+  }
+
+  document.getElementById("item-stock").value =
+    stock;
 }
