@@ -32,13 +32,13 @@ textarea {
   font: inherit;
 }
 
-.app-header {
+.hero {
   background: linear-gradient(135deg, #2f7d6d, #5ab49f);
   color: #fff;
   padding: 40px 20px 80px;
 }
 
-.app-header > div,
+.hero-inner,
 .container {
   width: min(1080px, 100%);
   margin: 0 auto;
@@ -318,7 +318,7 @@ textarea {
 }
 
 @media (max-width: 720px) {
-  .app-header {
+  .hero {
     padding-bottom: 68px;
   }
 
