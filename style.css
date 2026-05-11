@@ -353,3 +353,48 @@ textarea {
     flex: 1;
   }
 }
+.voice-panel {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  background: #f4f7fb;
+  padding: 16px;
+  border-radius: 12px;
+  margin-bottom: 24px;
+}
+
+.voice-button {
+  background: #2f8f7b;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 14px 18px;
+  font-size: 16px;
+  cursor: pointer;
+  min-width: 140px;
+}
+
+.voice-button:hover {
+  opacity: 0.9;
+}
+
+.voice-status {
+  font-size: 14px;
+  color: #555;
+  margin-top: 8px;
+}
+
+.voice-example {
+  font-size: 14px;
+  color: #666;
+}
+
+@media (max-width: 768px) {
+  .voice-panel {
+    flex-direction: column;
+  }
+
+  .voice-button {
+    width: 100%;
+  }
+}
