@@ -7,21 +7,61 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <header class="app-header">
-    <div>
+  <header class="hero">
+    <div class="hero-inner">
       <p class="eyebrow">Daily Stock Manager</p>
       <h1>日用品 在庫管理</h1>
-      <p class="lead">家にある日用品の残り数を記録して、買い忘れを防ぎましょう。</p>
+      <p class="lead">家にある日用品の在庫を記録して、買い忘れを防ぎましょう。</p>
     </div>
   </header>
 
   <main class="container">
-    <section class="card form-card" aria-labelledby="form-title">
-      <h2 id="form-title">商品を登録</h2>
+    <section class="card form-card" aria-labelledby="register-title">
+      <div class="section-title">
+        <h2 id="register-title">商品を登録</h2>
+        <p>手入力でも、スマホの音声入力でも登録できます。音声入力後は内容を確認して追加します。</p>
+      </div>
+
+      <div class="voice-panel" aria-labelledby="voice-title">
+        <button
+          type="button"
+          id="voice-button"
+          class="voice-button"
+          aria-describedby="voice-status"
+          aria-pressed="false"
+        >
+          <span class="voice-icon" aria-hidden="true">🎙️</span>
+          <span>音声で入力</span>
+        </button>
+
+        <div>
+          <h3 id="voice-title">マイク入力</h3>
+
+          <p class="voice-example">
+            例：「トイレットペーパー 3個」「洗剤を2本追加」
+            （HTTPSまたはlocalhostで利用できます）
+          </p>
+
+          <p
+            id="voice-status"
+            class="voice-status"
+            aria-live="polite"
+          >
+            マイクボタンを押すと音声入力を開始します。
+            認識後は内容を確認してから追加してください。
+          </p>
+        </div>
+      </div>
+
       <form id="item-form" class="item-form">
         <label>
           商品名
-          <input type="text" id="item-name" placeholder="例：食器用洗剤" required>
+          <input
+            type="text"
+            id="item-name"
+            placeholder="例：食器用洗剤"
+            required
+          >
         </label>
 
         <label>
@@ -40,42 +80,67 @@
         <div class="form-grid">
           <label>
             現在の在庫数
-            <input type="number" id="item-stock" min="0" value="1" required>
+            <input
+              type="number"
+              id="item-stock"
+              min="0"
+              value="1"
+              required
+            >
           </label>
 
           <label>
             最低必要数
-            <input type="number" id="item-minimum" min="0" value="1" required>
+            <input
+              type="number"
+              id="item-minimum"
+              min="0"
+              value="1"
+              required
+            >
           </label>
         </div>
 
         <label>
           メモ
-          <textarea id="item-note" rows="3" placeholder="例：詰め替え用を買う"></textarea>
+          <textarea
+            id="item-note"
+            rows="3"
+            placeholder="例：詰め替え用を買う"
+          ></textarea>
         </label>
 
-        <button type="submit" class="primary-button">追加する</button>
+        <button type="submit" class="primary-button">
+          追加する
+        </button>
       </form>
     </section>
 
-    <section class="summary-grid" aria-label="在庫の概要">
-      <div class="summary-card">
+    <section class="summary" aria-label="在庫の概要">
+      <article class="summary-card">
         <span id="total-count">0</span>
         <p>登録商品</p>
-      </div>
-      <div class="summary-card alert">
+      </article>
+
+      <article class="summary-card needs">
         <span id="need-count">0</span>
         <p>買い足し必要</p>
-      </div>
+      </article>
     </section>
 
     <section class="list-section" aria-labelledby="list-title">
-      <div class="section-heading">
-        <h2 id="list-title">在庫リスト</h2>
-        <p>＋1 / −1 ボタンで在庫数をすぐに更新できます。</p>
+      <div class="section-title list-title-row">
+        <div>
+          <h2 id="list-title">在庫リスト</h2>
+          <p>在庫数は ＋1 / −1 で素早く更新できます。</p>
+        </div>
       </div>
+
       <div id="item-list" class="item-list"></div>
-      <p id="empty-message" class="empty-message">商品がまだ登録されていません。</p>
+
+      <p id="empty-message" class="empty-message">
+        商品がまだ登録されていません。
+      </p>
     </section>
   </main>
 
