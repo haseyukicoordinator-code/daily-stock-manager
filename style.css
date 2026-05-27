@@ -514,3 +514,51 @@ textarea {
     width: 100%;
   }
 }
+.two-columns {
+  grid-template-columns: 1fr 1fr;
+}
+
+.form-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.secondary-button {
+  min-height: 56px;
+  background: #eef2f7;
+  color: #233044;
+  border: none;
+  border-radius: 14px;
+  padding: 15px 18px;
+}
+
+.edit-button {
+  min-height: 54px;
+  background: #f0f7ff;
+  color: #2f7d6d;
+  border: none;
+  border-radius: 14px;
+  padding: 12px 14px;
+}
+
+.item-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  gap: 8px;
+}
+
+@media (max-width: 720px) {
+
+  .two-columns {
+    grid-template-columns: 1fr;
+  }
+
+  .form-actions {
+    display: grid;
+  }
+
+  .item-actions {
+    grid-template-columns: 1fr 1fr;
+  }
+
+}
