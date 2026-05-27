@@ -4,18 +4,18 @@ const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecogni
 const UNIT_OPTIONS = ["個", "本", "箱", "袋", "枚", "ロール", "パック", "セット", "ml", "L", "g", "kg"];
 
 const sampleItems = [
-  { id: createId(), name: "食器用洗剤", category: "洗剤", stock: 1, unit: "本", minimum: 2, note: "詰め替え用を買う" },
-  { id: createId(), name: "トイレットペーパー", category: "紙類", stock: 3, unit: "ロール", minimum: 4, note: "12ロール入りを買う" },
-  { id: createId(), name: "ティッシュ", category: "紙類", stock: 1, unit: "箱", minimum: 2, note: "リビング用" },
-  { id: createId(), name: "レトルトカレー", category: "食品ストック", stock: 3, unit: "個", minimum: 2, note: "非常食として保管" }
+  { id: createId(), name: "食器用洗剤", category: "洗剤", stock: 1, unit: "本", note: "詰め替え用を買う" },
+  { id: createId(), name: "トイレットペーパー", category: "紙類", stock: 3, unit: "ロール", note: "12ロール入りを買う" },
+  { id: createId(), name: "ティッシュ", category: "紙類", stock: 1, unit: "箱", note: "リビング用" },
+  { id: createId(), name: "レトルトカレー", category: "食品ストック", stock: 3, unit: "個", note: "非常食として保管" }
 ];
 
 const form = document.querySelector("#item-form");
+const editIdInput = document.querySelector("#edit-id");
 const nameInput = document.querySelector("#item-name");
 const categoryInput = document.querySelector("#item-category");
 const stockInput = document.querySelector("#item-stock");
 const unitInput = document.querySelector("#item-unit");
-const minimumInput = document.querySelector("#item-minimum");
 const noteInput = document.querySelector("#item-note");
 const voiceButton = document.querySelector("#voice-button");
 const voiceButtonText = voiceButton.querySelector("span:last-child");
@@ -24,6 +24,8 @@ const itemList = document.querySelector("#item-list");
 const emptyMessage = document.querySelector("#empty-message");
 const totalCount = document.querySelector("#total-count");
 const needCount = document.querySelector("#need-count");
+const submitButton = document.querySelector("#submit-button");
+const cancelEditButton = document.querySelector("#cancel-edit-button");
 
 let items = loadItems();
 let recognition = null;
@@ -37,38 +39,78 @@ renderItems();
 form.addEventListener("submit", (event) => {
   event.preventDefault();
 
-  const newItem = {
-    id: createId(),
+  const itemData = {
     name: nameInput.value.trim(),
     category: categoryInput.value,
     stock: Number(stockInput.value),
     unit: unitInput.value,
-    minimum: Number(minimumInput.value),
     note: noteInput.value.trim()
   };
 
-  if (!newItem.name) {
+  if (!itemData.name) {
     nameInput.focus();
     return;
   }
 
-  items.unshift(newItem);
+  const editId = editIdInput.value;
+
+  if (editId) {
+    items = items.map((item) => {
+      if (item.id !== editId) {
+        return item;
+      }
+
+      return {
+        ...item,
+        ...itemData
+      };
+    });
+
+    setVoiceStatus("登録内容を更新しました。", "success");
+  } else {
+    items.unshift({
+      id: createId(),
+      ...itemData
+    });
+
+    setVoiceStatus("商品を追加しました。", "success");
+  }
+
   saveItems();
   renderItems();
   resetForm();
-  setVoiceStatus("商品を追加しました。続けて音声入力もできます。", "success");
+});
+
+cancelEditButton.addEventListener("click", () => {
+  resetForm();
+  setVoiceStatus("編集をキャンセルしました。", "");
 });
 
 itemList.addEventListener("click", (event) => {
   const button = event.target.closest("button[data-action]");
-  if (!button) return;
+
+  if (!button) {
+    return;
+  }
 
   const id = button.dataset.id;
   const action = button.dataset.action;
 
-  if (action === "increase") updateStock(id, 1);
-  if (action === "decrease") updateStock(id, -1);
-  if (action === "delete") deleteItem(id);
+  if (action === "increase") {
+    updateStock(id, 1);
+  }
+
+  if (action === "decrease") {
+    updateStock(id, -1);
+  }
+
+  if (action === "edit") {
+    startEdit(id);
+  }
+
+  if (action === "delete") {
+    deleteItem(id);
+  }
 });
 
 function setupVoiceInput() {
@@ -94,6 +136,7 @@ function setupVoiceInput() {
       recognition.stop();
       return;
     }
+
     startVoiceRecognition();
   });
 
@@ -113,12 +156,15 @@ function setupVoiceInput() {
       .join("")
       .trim();
 
-    if (!transcript) return;
+    if (!transcript) {
+      return;
+    }
 
     heardSpeech = true;
     setVoiceStatus(`認識中：「${transcript}」`, "listening");
 
     const lastResult = event.results[event.results.length - 1];
+
     if (lastResult.isFinal) {
       applyVoiceResult(transcript);
     }
@@ -162,7 +208,7 @@ function applyVoiceResult(transcript) {
   nameInput.value = parsedItem.name;
 
   if (parsedItem.stock !== null) {
-    stockInput.value = parsedItem.stock;
+    stockInput.value = String(parsedItem.stock);
   }
 
   if (parsedItem.unit) {
@@ -170,17 +216,18 @@ function applyVoiceResult(transcript) {
   }
 
   const suggestedCategory = suggestCategory(parsedItem.name);
+
   if (suggestedCategory) {
     categoryInput.value = suggestedCategory;
   }
 
   const unit = parsedItem.unit || unitInput.value;
   const stockMessage = parsedItem.stock === null
-    ? "在庫数は手入力してください。"
+    ? "在庫数は選択してください。"
     : `在庫数を${parsedItem.stock}${unit}にしました。`;
 
   setVoiceStatus(`「${parsedItem.name}」を入力しました。内容を確認して追加してください。${stockMessage}`, "success");
-  minimumInput.focus();
+  noteInput.focus();
 }
 
 function parseVoiceInput(transcript) {
@@ -190,10 +237,10 @@ function parseVoiceInput(transcript) {
     .trim();
 
   const unitPattern = UNIT_OPTIONS.join("|");
-  const countPattern = new RegExp(`([0-9]+(?:\\.[0-9]+)?)\\s*(${unitPattern})?`, "i");
+  const countPattern = new RegExp(`([0-9]+)\\s*(${unitPattern})?`, "i");
   const countMatch = normalizedTranscript.match(countPattern);
 
-  const stock = countMatch ? Number(countMatch[1]) : null;
+  const stock = countMatch ? Math.min(Number(countMatch[1]), 20) : null;
   const unit = countMatch && countMatch[2] ? countMatch[2] : "";
 
   const name = normalizedTranscript
@@ -264,6 +311,27 @@ function getVoiceErrorMessage(errorName) {
   return messages[errorName] || "音声認識に失敗しました。もう一度お試しください。";
 }
 
+function startEdit(id) {
+  const item = items.find((currentItem) => currentItem.id === id);
+
+  if (!item) {
+    return;
+  }
+
+  editIdInput.value = item.id;
+  nameInput.value = item.name;
+  categoryInput.value = item.category;
+  stockInput.value = String(Math.min(Number(item.stock) || 0, 20));
+  unitInput.value = item.unit || "個";
+  noteInput.value = item.note || "";
+
+  submitButton.textContent = "更新する";
+  cancelEditButton.hidden = false;
+
+  form.scrollIntoView({ behavior: "smooth", block: "start" });
+  nameInput.focus();
+}
+
 function createId() {
   return `item-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
@@ -289,8 +357,7 @@ function normalizeItem(item) {
   return {
     ...item,
     unit: UNIT_OPTIONS.includes(item.unit) ? item.unit : "個",
-    stock: Number(item.stock) || 0,
-    minimum: Number(item.minimum) || 0
+    stock: Math.min(Number(item.stock) || 0, 20)
   };
 }
 
@@ -300,9 +367,11 @@ function saveItems() {
 
 function resetForm() {
   form.reset();
-  stockInput.value = 1;
+  editIdInput.value = "";
+  stockInput.value = "1";
   unitInput.value = "個";
-  minimumInput.value = 1;
+  submitButton.textContent = "追加する";
+  cancelEditButton.hidden = true;
   nameInput.focus();
 }
 
@@ -316,6 +385,7 @@ function renderItems() {
   items.forEach((item) => {
     const itemElement = document.createElement("article");
     const needsRestock = isNeedRestock(item);
+
     itemElement.className = needsRestock ? "stock-item need-restock" : "stock-item";
 
     const statusText = needsRestock ? "買い足し必要" : "在庫OK";
@@ -334,10 +404,6 @@ function renderItems() {
             <span class="stock-label">現在</span>
             <strong class="stock-value">${formatQuantity(item.stock, item.unit)}</strong>
           </div>
-          <div>
-            <span class="stock-label">最低</span>
-            <strong class="minimum-value">${formatQuantity(item.minimum, item.unit)}</strong>
-          </div>
           <span class="${statusClass}">${statusText}</span>
         </div>
 
@@ -347,6 +413,7 @@ function renderItems() {
       <div class="item-actions" aria-label="${escapeHtml(item.name)}の操作">
         <button class="stock-button" type="button" data-action="decrease" data-id="${item.id}" ${item.stock === 0 ? "disabled" : ""}>−1</button>
         <button class="stock-button" type="button" data-action="increase" data-id="${item.id}">＋1</button>
+        <button class="edit-button" type="button" data-action="edit" data-id="${item.id}">編集</button>
         <button class="delete-button" type="button" data-action="delete" data-id="${item.id}">削除</button>
       </div>
     `;
@@ -360,16 +427,18 @@ function formatQuantity(value, unit) {
 }
 
 function isNeedRestock(item) {
-  return item.stock <= item.minimum;
+  return Number(item.stock) === 0;
 }
 
 function updateStock(id, amount) {
   items = items.map((item) => {
-    if (item.id !== id) return item;
+    if (item.id !== id) {
+      return item;
+    }
 
     return {
       ...item,
-      stock: Math.max(0, item.stock + amount)
+      stock: Math.max(0, Math.min(20, Number(item.stock) + amount))
     };
   });
 
