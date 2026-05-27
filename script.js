@@ -81,11 +81,20 @@ itemList.addEventListener("click", (event) => {
 function renderItems() {
   itemList.innerHTML = "";
 
-  const sortedItems = [...items].sort((a, b) => {
-    const aNeed = isNeedRestock(a) ? 1 : 0;
-    const bNeed = isNeedRestock(b) ? 1 : 0;
-    return bNeed - aNeed;
-  });
+const sortedItems = [...items].sort((a, b) => {
+  const aStock = Number(a.stock);
+  const bStock = Number(b.stock);
+
+  if (aStock === 0 && bStock !== 0) {
+    return -1;
+  }
+
+  if (aStock !== 0 && bStock === 0) {
+    return 1;
+  }
+
+  return 0;
+});
 
   totalCount.textContent = items.length;
   needCount.textContent = items.filter(isNeedRestock).length;
